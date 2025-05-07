@@ -44,6 +44,18 @@ def search_ibspot(file_path):
     if not workbook or not sheet:
         return
 
+    # 获取ASIN列的索引
+    asin_col_index = None
+    for idx, cell in enumerate(sheet[1]):  # 遍历第一行
+        if cell.value == 'ASIN':
+            asin_col_index = idx
+            break
+
+    if asin_col_index is None:
+        print("未找到ASIN列")
+        log_msg(log_file, "未找到ASIN列")
+        return
+
     # 获取最后一列的索引
     last_column = sheet.max_column  # 获取当前最后一列的索引
 
@@ -58,7 +70,7 @@ def search_ibspot(file_path):
     # 遍历每一行（从第二行开始）
     errorCount = 0
     for row in sheet.iter_rows(min_row=2, values_only=False):
-        product_sku = row[1].value  # 第二列是产品SKU
+        product_sku = row[asin_col_index].value  # 使用ASIN列的索引
         if not product_sku:
             continue
 
@@ -226,4 +238,3 @@ if __name__ == "__main__":
     directory = "untreated"+processId  # 替换为你的文件夹路径
     process_files(directory)
     sys.exit(0)
-    

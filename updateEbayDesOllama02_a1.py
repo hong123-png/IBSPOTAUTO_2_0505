@@ -160,34 +160,64 @@ async def process_file(file_path):
     if 'ShortDescriptionUpdated' not in df.columns:
         df['ShortDescriptionUpdated'] = ""
 
-    if 'ShortDescription' not in df.columns:
-        logging.error(f"列 'ShortDescription' 不存在于文件 {file_path} 中")
-        log_msg(log_file, f"列 'ShortDescription' 不存在于文件 {file_path} 中")
-        return
+    # 检查每一行的siteType并更新ShortDescriptionUpdated 处理Amazon数据
+    try:
+        # 遍历每一行数据
+        for index in range(len(df)):
+            # 直接从DataFrame中获取siteType
+            siteType = df.at[index, 'siteType'] if 'siteType' in df.columns else 'Amazon'
 
-    async with aiohttp.ClientSession() as session:
-        tasks = []
-        for index, value in df['ShortDescription'].items():
-            url = df.loc[index, 'url']  # 使用 .loc 通过索引和列名获取对应的 url
-            if url.startswith("https://shop.tiktok.com") or url.startswith("http://shop.tiktok.com"):  # 如果 url 开头是 http:// 或 https://，则进行处理
-                t_SiteType = 'Tiktok'
-            elif url.startswith("https://www.ebay.com") or url.startswith("http://www.ebay.com"):  # 如果 url 开头是 http:// 或 https://，则进行处理
-                t_SiteType = 'ebay'
-            elif url.startswith("https://www.amazon.com") or url.startswith("http://www.amazon.com"):  # 如果 url 开头是 http:// 或 https://，则进行处理
-                t_SiteType = 'Amazon'
-            else:
-                continue
-            ttt = df.loc[index, 'ShortDescriptionUpdated']
-            if isinstance(ttt, str) and ttt.strip():
-                continue  # 如果 ShortDescriptionUpdated 列存在且值不为空，则跳过
-            tasks.append(process_row(index, value, session, df, t_SiteType))
+            # 获取所有feature列的数据
+            single_features = []
+            if siteType == 'Amazon':
+                for i in range(1, 11):  # 检查Feature 1到Feature 10
+                    feature_col = f'Description & Features: Feature {i}'
+                    if feature_col in df.columns:
+                        feature_value = df.at[index, feature_col]
+                        if pd.notna(feature_value) and feature_value.strip():
+                            single_features.append(feature_value)
 
-        # 分批处理任务，每批 6 个
-        for i in range(0, len(tasks), 6):
-            batch = tasks[i:i + 6]
-            await asyncio.gather(*batch)
-            logging.info(f"Processed batch {i // 6 + 1}")
-            df.to_csv(file_path, index=False, encoding='utf-8-sig')
+                # 格式化feature列表
+                single_features2 = [f"{s}\n" if i != len(single_features) - 1 else s for i, s in
+                                    enumerate(single_features)]
+                single_features_str = ''.join(single_features2)
+
+                logging.info(f"处理第 {index + 1} 行，siteType: {siteType}")
+                logging.info(f"处理第 {index + 1} 行，single_features: {single_features_str}")
+
+                # 直接使用single_features更新ShortDescriptionUpdated
+                df.at[index, 'ShortDescriptionUpdated'] = single_features_str
+                logging.info(f"第 {index + 1} 行是Amazon商品，已更新ShortDescriptionUpdated")
+                logging.info(f"更新后的值: {df.at[index, 'ShortDescriptionUpdated']}")
+
+    except Exception as e:
+        logging.error(f"检查siteType时出错: {e}")
+        logging.error(f"错误详情: {str(e)}")
+
+    if 'ShortDescription' in df.columns:
+        async with aiohttp.ClientSession() as session:
+            tasks = []
+            for index, value in df['ShortDescription'].items():
+                url = df.loc[index, 'url']  # 使用 .loc 通过索引和列名获取对应的 url
+                if url.startswith("https://shop.tiktok.com") or url.startswith("http://shop.tiktok.com"):  # 如果 url 开头是 http:// 或 https://，则进行处理
+                    t_SiteType = 'Tiktok'
+                elif url.startswith("https://www.ebay.com") or url.startswith("http://www.ebay.com"):  # 如果 url 开头是 http:// 或 https://，则进行处理
+                    t_SiteType = 'ebay'
+                else:
+                    continue
+                ttt = df.loc[index, 'ShortDescriptionUpdated']
+                if isinstance(ttt, str) and ttt.strip():
+                    continue  # 如果 ShortDescriptionUpdated 列存在且值不为空，则跳过
+                tasks.append(process_row(index, value, session, df, t_SiteType))
+
+            # 分批处理任务，每批 6 个
+            for i in range(0, len(tasks), 6):
+                batch = tasks[i:i + 6]
+                await asyncio.gather(*batch)
+                logging.info(f"Processed batch {i // 6 + 1}")
+                df.to_csv(file_path, index=False, encoding='utf-8-sig')
+    else:
+        logging.info("文件中没有ShortDescription列，跳过处理")
 
     # 保存文件到父级目录的 UpLoadData 文件夹
     processed_file_name = f"{os.path.basename(file_path)}"

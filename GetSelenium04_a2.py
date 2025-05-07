@@ -509,7 +509,6 @@ def runSelenium():
             description = ShortDescriptionUpdated
             single_features = "WELCOME TO OUR STORE"
         else:
-            description = "WELCOME TO OUR STORE"
             single_features = ShortDescriptionUpdated
 
         if siteType == 'TK_US':

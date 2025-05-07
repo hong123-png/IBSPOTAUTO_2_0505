@@ -509,7 +509,6 @@ def runSelenium():
             description = ShortDescriptionUpdated
             single_features = "WELCOME TO OUR STORE"
         else:
-            description = "WELCOME TO OUR STORE"
             single_features = ShortDescriptionUpdated
 
         if siteType == 'TK_US':
@@ -524,7 +523,7 @@ def runSelenium():
             description = ""
             single_features = ShortDescriptionUpdated
         
-        cost_price = cost_price.replace('$', '').replace(',', '')
+        cost_price = cost_price.replace('$', '').replace(',', '').replace(' ', '')
         if cost_price == '' or int(float(cost_price)) > 150:
             print('cost_price===', cost_price)
             print(f'\n-----第{index}行执行时候，价格为空或者大于150，跳过！-----')
@@ -532,6 +531,7 @@ def runSelenium():
             continue
         print('cost_price===', cost_price)
         cost_price = "{:.2f}".format(float(cost_price))
+        print('111111111cost_price===', cost_price)
         shippingFee = "{:.2f}".format(float(shippingFee))
         if(siteType == 'ebay' or siteType == 'TK_US'):
             cost_price = "{:.2f}".format(float(cost_price) + float(shippingFee))

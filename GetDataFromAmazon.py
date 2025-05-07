@@ -174,11 +174,15 @@ def get_row_datas(row_num):
     item_height = get_value(title_dict['item_height'])
     item_weight = get_value(title_dict['item_weight'])
     siteType = get_value(title_dict['siteType'])
+    if siteType == '':
+        siteType = 'Amazon'
     isFreeShipping = get_value(title_dict['isFreeShipping'])
     productInUS = get_value(title_dict['productInUS'])
     ShortDescriptionUpdated = get_value(title_dict['ShortDescriptionUpdated'])
     properties = get_value(title_dict['properties'])  # 读取 properties 列数据
     shippingFee = get_value(title_dict['Shipping Fee'])  # shipping fee
+    if shippingFee == '':
+        shippingFee = '0.00'
     isVariation = get_value(title_dict['IsVariation'])  # isVariation
     variationName = get_value(title_dict['VariationName'])  # variationName
 
