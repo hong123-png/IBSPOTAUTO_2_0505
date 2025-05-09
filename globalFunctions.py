@@ -134,7 +134,7 @@ def split_excel(input_file, records_per_file=50, output_prefix="part_"):
 
     print("文件分割完成！")
 
-def split_excel2(input_file, records_per_file=50, output_prefix="part_"):
+def split_excel2(input_file, records_per_file=50, output_prefix="part_",output_dir="split_files"):
     """
     将大型 Excel 文件分割成多个包含固定记录数的小文件，并保留表头。
     确保第二列作为文本读取和写入，避免科学计数法显示。
@@ -147,6 +147,7 @@ def split_excel2(input_file, records_per_file=50, output_prefix="part_"):
     try:
         # 指定第二列 (索引为 1) 的数据类型为字符串
         df = pd.read_excel(input_file, dtype={1: str})
+        df = df.applymap(lambda cell: '' if isinstance(cell, str) and 'Exported on' in cell and 'Keepa.com' in cell else cell)
     except FileNotFoundError:
         print(f"错误：文件 '{input_file}' 未找到。")
         return
@@ -159,7 +160,7 @@ def split_excel2(input_file, records_per_file=50, output_prefix="part_"):
     num_files = math.ceil(total_records / records_per_file)
     header = list(df.columns)  # 获取表头
 
-    output_dir = "split_files"  # 设置输出文件夹名称
+    # output_dir = "split_files"  # 设置输出文件夹名称
     os.makedirs(output_dir, exist_ok=True)  # 创建输出文件夹，如果已存在则不报错
 
     # 得到文件名
