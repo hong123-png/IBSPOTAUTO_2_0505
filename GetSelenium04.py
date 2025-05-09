@@ -156,11 +156,13 @@ def WaitEle_ByID(driver, findStr):
     )
     return ele
 
-
-def getSourceUrl(asin, siteType='ebay'):
+def getSourceUrl(asin, siteType='ebay', locale='com'):
     url = ''
     if siteType == 'Amazon':
-        url = f"https://www.amazon.com/dp/{asin}"
+        if locale == 'com':
+            url = f"https://www.amazon.com/dp/{asin}"
+        elif locale == 'de':
+            url = f"https://www.amazon.de/dp/{asin}"
     elif siteType == 'ebay':
         url = f"https://www.ebay.com/itm/{asin}"
     elif siteType == 'TK_US':
@@ -168,12 +170,13 @@ def getSourceUrl(asin, siteType='ebay'):
     return url
 
 
-def getInputSKU(asin, siteType='ebay'):
+def getInputSKU(asin, siteType='ebay',locale='com'):
     sku = ''
     if siteType == 'Amazon':
-        sku = asin + '_AMAZON_US'
-    elif siteType == '':
-        sku = asin + '_AMAZON_US'
+        if locale == 'com':
+            sku = asin + '_Amazon_US'
+        elif locale == 'de':
+            sku = asin + '_Amazon_DE'
     elif siteType == 'ebay':
         sku = asin + '_ebay_US'
     elif siteType == 'TK_US':
@@ -467,12 +470,12 @@ def runSelenium():
         this_start_time = time.time()
         print(f'----asin:{asin}-----')
         log_msg(log_file, f'----asin:{asin}-----')
-        name, description, single_features, cost_price, categorie, sins, brand, Image, is_prime, item_length, item_width, item_height, item_weight, siteType, isFreeShipping, shippingFee, productInUS, ShortDescriptionUpdated, properties, isVariation, variationName= get_row_datas(
+        name, description, single_features, cost_price, categorie, sins, brand, Image, is_prime, item_length, item_width, item_height, item_weight, siteType, isFreeShipping, shippingFee, productInUS, ShortDescriptionUpdated, properties, isVariation, variationName, locale= get_row_datas(
             index)
         
         
-        source_url = getSourceUrl(asin, siteType)
-        sku = getInputSKU(asin, siteType)
+        source_url = getSourceUrl(asin, siteType, locale)
+        sku = getInputSKU(asin, siteType, locale)
         if siteType == 'TK_US':
             if isVariation == 'True':
                 sku = asin + '_TK_US' + '_' + variationName.replace(' ', '')
@@ -638,7 +641,10 @@ def runSelenium():
                 source_url_input.send_keys(source_url)
 
                 if siteType == 'Amazon':
-                    select_shipping2 = browser.find_element(By.XPATH, '//*[text()="Public - US to US by Weight"]')
+                    if locale == 'com':
+                        select_shipping2 = browser.find_element(By.XPATH, '//*[text()="Public - US to US by Weight"]')
+                    else: 
+                        select_shipping2 = browser.find_element(By.XPATH, '//*[text()="Public - Intel to US by Weight"]')
                 if siteType == '':
                     select_shipping2 = browser.find_element(By.XPATH, '//*[text()="Public - US to US by Weight"]')
                 if siteType == 'TK_US':
@@ -953,6 +959,19 @@ def runSelenium():
                                             '/html/body/div[1]/div/main/div/div[2]/div[1]/div[1]/div[2]/form/div[1]/div[1]/div/div/input')
                 stock.send_keys(Keys.CONTROL, 'a')
                 stock.send_keys('50')
+
+                 #选择仓库
+                if locale == 'de':
+                    # 点击下拉框
+                    stock_location = WebDriverWait(browser, 10).until(
+                        EC.element_to_be_clickable((By.XPATH, '//*[@id="select2-stock_location_id-container"]'))
+                    )
+                    stock_location.click()
+                    # 等待并选择包含"仓库"文本的选项
+                    stock_location_default = WebDriverWait(browser, 10).until(
+                        EC.element_to_be_clickable((By.XPATH, "//li[contains(text(), 'DE')]"))
+                    )
+                    stock_location_default.click()
 
                 # 点击库存按钮
                 add_stock_button = browser.find_element(By.XPATH,

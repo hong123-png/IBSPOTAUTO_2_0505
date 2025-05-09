@@ -5,6 +5,7 @@ import csv
 import pandas as pd
 import chardet
 from getParams import getParams
+import logging
 
 upLoadData = "UpLoadData"
 if getParams()['upLoadData'] != '':
@@ -18,7 +19,23 @@ def get_file_encoding(file_path):
     with open(file_path, "rb") as f:
         result = chardet.detect(f.read())
         return result['encoding']
-    
+
+def get_exchange_rate(from_currency='EUR', to_currency='USD'):
+    """获取实时汇率"""
+    try:
+        url = f'https://open.er-api.com/v6/latest/{from_currency}'
+        response = requests.get(url)
+        response.raise_for_status()
+        data = response.json()
+        if data.get('rates'):
+            return data['rates'][to_currency]
+        else:
+            logging.error(f'获取汇率失败: {data}')
+            return 1.12  # 如果API调用失败，返回默认汇率
+    except Exception as e:
+        logging.error(f'获取汇率时发生错误: {str(e)}')
+        return 1.12  # 发生错误时返回默认汇率
+
 # 数据文件路径
 base_path = os.path.dirname(os.path.abspath(__file__))  # 获取当前脚本所在目录
 upload_folder = os.path.join(base_path, upLoadData)  # 指定 UpLoadData 文件夹
@@ -88,6 +105,8 @@ def get_title():
             dic['column_data_1'] = index
         elif col == 'Description & Features: Feature 10':
             dic['column_data_10'] = index
+        elif col.strip('\ufeff').lower() == 'locale':  # 添加对BOM标记的处理
+            dic['locale'] = index
         elif col in ['Buy Box 🚚: Current', 'Buy Box : Current', 'Buy Box: Current']:
             dic['cost_price'] = index
         elif col == 'Categories: Root':
@@ -126,7 +145,7 @@ def get_title():
     # 确保所有键都有默认值 -1
     keys = ['Image', 'name', 'description', 'column_data_1', 'column_data_10', 'cost_price', 'categorie', 'sins', 'brand', 'is_prime',
             'item_length', 'item_width', 'item_height', 'item_weight', 'siteType', 'isFreeShipping', 'productInUS',
-            'ShortDescriptionUpdated', 'properties', 'Shipping Fee', 'IsVariation', 'VariationName']
+            'ShortDescriptionUpdated', 'properties', 'Shipping Fee', 'IsVariation', 'VariationName','locale']
     for key in keys:
         if key not in dic:
             dic[key] = -1  # 如果列不存在，返回 -1
@@ -164,6 +183,20 @@ def get_row_datas(row_num):
 
     single_features2 = [f"{s}\n" if i != len(single_features) - 1 else s for i, s in enumerate(single_features)]
     cost_price = get_value(title_dict['cost_price'])
+    locale = get_value(title_dict['locale'])
+    print(f"获取到的locale值: {locale}")  # 添加调试日志
+    # 处理价格转换
+    if locale.lower() == 'de':
+        try:
+            price_str = cost_price.replace('€', '').strip()
+            if price_str:
+                exchange_rate = get_exchange_rate()
+                price_value = float(price_str) * exchange_rate
+                cost_price = f'${price_value:.2f}'
+                logging.info(f'转换汇率: 1 EUR = {exchange_rate} USD')
+        except (ValueError, AttributeError) as e:
+            logging.error(f'价格转换错误: {e}')
+
     categorie = get_value(title_dict['categorie'])
     sins = get_value(title_dict['sins'])
     brand = get_value(title_dict['brand'])
@@ -186,7 +219,7 @@ def get_row_datas(row_num):
     isVariation = get_value(title_dict['IsVariation'])  # isVariation
     variationName = get_value(title_dict['VariationName'])  # variationName
 
-    return name, description, single_features2, cost_price, categorie, sins, brand, Image, is_prime, item_length, item_width, item_height, item_weight, siteType, isFreeShipping, shippingFee, productInUS, ShortDescriptionUpdated, properties, isVariation, variationName
+    return name, description, single_features2, cost_price, categorie, sins, brand, Image, is_prime, item_length, item_width, item_height, item_weight, siteType, isFreeShipping, shippingFee, productInUS, ShortDescriptionUpdated, properties, isVariation, variationName, locale
 
 # 获取 ASIN 列表
 def getasins():
@@ -217,7 +250,7 @@ def get_variationNames():
 
 if __name__ == '__main__':
     # 读取 CSV 第四行数据（索引 3）
-    name, description, single_features, cost_price, categorie, sins, brand, is_prime, item_length, item_width, item_height, item_weight, siteType, isFreeShipping, productInUS, ShortDescriptionUpdated, properties, isVariation, variationName = get_row_datas(3)
+    name, description, single_features, cost_price, categorie, sins, brand, is_prime, item_length, item_width, item_height, item_weight, siteType, isFreeShipping, productInUS, ShortDescriptionUpdated, properties, isVariation, variationName, locale = get_row_datas(3)
 
     # 打印 properties 列数据
     print("Properties:", properties)
