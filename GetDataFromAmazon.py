@@ -6,6 +6,7 @@ import pandas as pd
 import chardet
 from getParams import getParams
 import logging
+import requests
 
 upLoadData = "UpLoadData"
 if getParams()['upLoadData'] != '':
